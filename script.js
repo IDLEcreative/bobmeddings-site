@@ -34,15 +34,36 @@ document.querySelectorAll(".site-nav a").forEach((link) => {
   }
 });
 
-document.querySelectorAll("[data-placeholder-form]").forEach((form) => {
-  form.addEventListener("submit", (event) => {
+const FORM_ENDPOINT = "https://formsubmit.co/ajax/bobbimeds@gmail.com";
+
+document.querySelectorAll("[data-form]").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const status = form.querySelector(".form-status");
-    if (status) {
-      status.textContent =
-        "Thank you — this preview form is ready to connect to your chosen email or form service.";
+    const button = form.querySelector('button[type="submit"]');
+    const data = Object.fromEntries(new FormData(form));
+    if (data._honey) return;
+    delete data._honey;
+    data._subject = `Website: ${form.dataset.form}`;
+    data._template = "table";
+    data.page = document.title;
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Sending…";
+    try {
+      const response = await fetch(FORM_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || String(result.success) !== "true") throw new Error(result.message || "Send failed");
+      if (status) status.textContent = "Thank you, your note is on its way to Bobbi.";
+      form.reset();
+    } catch (error) {
+      if (status) status.textContent = "Sorry, that didn't send. Please email bobbimeds@gmail.com instead.";
+    } finally {
+      if (button) button.disabled = false;
     }
-    form.reset();
   });
 });
 
