@@ -34,35 +34,25 @@ document.querySelectorAll(".site-nav a").forEach((link) => {
   }
 });
 
-const FORM_ENDPOINT = "https://formsubmit.co/ajax/bobbimeds@gmail.com";
+const FORM_EMAIL = "bobbimeds@gmail.com";
+const FIELD_LABELS = { name: "Name", email: "Email", subject: "About", message: "Message", artwork: "Artwork", interest: "Interested in" };
 
 document.querySelectorAll("[data-form]").forEach((form) => {
-  form.addEventListener("submit", async (event) => {
+  form.addEventListener("submit", (event) => {
     event.preventDefault();
+    const data = new FormData(form);
+    if (data.get("_honey")) return;
+    const lines = [];
+    for (const [key, value] of data) {
+      if (key.startsWith("_") || !String(value).trim()) continue;
+      lines.push(`${FIELD_LABELS[key] || key}: ${value}`);
+    }
+    const subject = `Website: ${data.get("subject") || form.dataset.form}`;
+    const body = `${lines.join("\n")}\n\n(Sent from bobmeddings.co.uk)`;
+    window.location.href = `mailto:${FORM_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     const status = form.querySelector(".form-status");
-    const button = form.querySelector('button[type="submit"]');
-    const data = Object.fromEntries(new FormData(form));
-    if (data._honey) return;
-    delete data._honey;
-    data._subject = `Website: ${form.dataset.form}`;
-    data._template = "table";
-    data.page = document.title;
-    if (button) button.disabled = true;
-    if (status) status.textContent = "Sending…";
-    try {
-      const response = await fetch(FORM_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || String(result.success) !== "true") throw new Error(result.message || "Send failed");
-      if (status) status.textContent = "Thank you, your note is on its way to Bobbi.";
-      form.reset();
-    } catch (error) {
-      if (status) status.textContent = "Sorry, that didn't send. Please email bobbimeds@gmail.com instead.";
-    } finally {
-      if (button) button.disabled = false;
+    if (status) {
+      status.textContent = `Your email app should open with your note ready. Just press send. If it doesn't, email ${FORM_EMAIL}.`;
     }
   });
 });
